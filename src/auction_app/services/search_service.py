@@ -9,8 +9,9 @@ from __future__ import annotations
 import base64
 import json
 
-from sqlalchemy import desc, func, select, text
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import literal_column
 
 from auction_app.models.auction import Auction
 from auction_app.schemas.search import SearchResult, SearchResultItem
@@ -34,6 +35,47 @@ def _decode_cursor(cursor: str) -> tuple[str, str] | None:
     return None
 
 
+def _build_where(stmt, *, category, price_min, price_max, q, state, cursor):
+    """Apply filters to a statement and return the modified statement."""
+    allowed_states = {"UPCOMING", "ACTIVE", "CLOSED", "SOLD", "UNSOLD"}
+    if state in allowed_states:
+        stmt = stmt.where(Auction.state == state)
+    else:
+        stmt = stmt.where(Auction.state == "ACTIVE")
+
+    if category:
+        stmt = stmt.where(Auction.category == category)
+
+    if price_min is not None:
+        stmt = stmt.where(
+            func.coalesce(Auction.highest_bid, Auction.starting_price) >= price_min
+        )
+    if price_max is not None:
+        stmt = stmt.where(
+            func.coalesce(Auction.highest_bid, Auction.starting_price) <= price_max
+        )
+
+    if q and q.strip():
+        tsquery = func.plainto_tsquery(literal_column("'english'"), q)
+        tsvector = func.to_tsvector(
+            literal_column("'english'"),
+            Auction.title + " " + func.coalesce(Auction.description, ""),
+        )
+        stmt = stmt.where(tsvector.op("@@")(tsquery))
+
+    if cursor:
+        decoded = _decode_cursor(cursor)
+        if decoded:
+            cursor_created, cursor_id = decoded
+            stmt = stmt.where(
+                literal_column(
+                    "(auction.created_at, auction.auction_id::text) < (:ct, :cid)"
+                ).bindparams(ct=cursor_created, cid=cursor_id)
+            )
+
+    return stmt
+
+
 async def search_auctions(
     db: AsyncSession,
     *,
@@ -49,65 +91,40 @@ async def search_auctions(
     limit = min(limit, 100)
     limit = max(limit, 1)
 
-    # Build base query
-    stmt = select(Auction)
+    # Build base query with filters
+    base_stmt = select(Auction)
+    filtered_stmt = _build_where(
+        base_stmt,
+        category=category,
+        price_min=price_min,
+        price_max=price_max,
+        q=q,
+        state=state,
+        cursor=cursor,
+    )
 
-    # State filter
-    allowed_states = {"UPCOMING", "ACTIVE", "CLOSED", "SOLD", "UNSOLD"}
-    if state in allowed_states:
-        stmt = stmt.where(Auction.state == state)
-    else:
-        stmt = stmt.where(Auction.state == "ACTIVE")
-
-    # Category filter
-    if category:
-        stmt = stmt.where(Auction.category == category)
-
-    # Price range filters (on highest_bid or starting_price)
-    if price_min is not None:
-        stmt = stmt.where(
-            func.coalesce(Auction.highest_bid, Auction.starting_price) >= price_min
-        )
-    if price_max is not None:
-        stmt = stmt.where(
-            func.coalesce(Auction.highest_bid, Auction.starting_price) <= price_max
-        )
-
-    # Full-text search
-    if q and q.strip():
-        # Use plainto_tsquery for safe keyword search
-        tsquery = func.plainto_tsquery(text("'english'"), q)
-        # Search against title and description concatenation
-        stmt = stmt.where(
-            func.to_tsvector(
-                text("'english'"),
-                Auction.title + " " + func.coalesce(Auction.description, ""),
-            ).op("@@")(tsquery)
-        )
-
-    # Cursor pagination
-    if cursor:
-        decoded = _decode_cursor(cursor)
-        if decoded:
-            cursor_created, cursor_id = decoded
-            stmt = stmt.where(
-                text(
-                    "(auction.created_at, auction.auction_id::text) < (:ct, :cid)"
-                ).bindparams(ct=cursor_created, cid=cursor_id)
-            )
-
-    # Order by created_at DESC, auction_id DESC for stable pagination
-    stmt = stmt.order_by(desc(Auction.created_at), desc(Auction.auction_id))
-
-    # Total count (separate query)
+    # Total count — rebuild the WHERE on a count query
     count_stmt = select(func.count()).select_from(Auction)
-    count_stmt = _copy_where(stmt, count_stmt, Auction)
+    count_stmt = _build_where(
+        count_stmt,
+        category=category,
+        price_min=price_min,
+        price_max=price_max,
+        q=q,
+        state=state,
+        cursor=None,  # no cursor on count
+    )
     total_result = await db.execute(count_stmt)
     total = total_result.scalar() or 0
 
+    # Order by created_at DESC, auction_id DESC for stable pagination
+    filtered_stmt = filtered_stmt.order_by(
+        desc(Auction.created_at), desc(Auction.auction_id)
+    )
+
     # Fetch with limit + 1 for has_more detection
-    stmt = stmt.limit(limit + 1)
-    result = await db.execute(stmt)
+    filtered_stmt = filtered_stmt.limit(limit + 1)
+    result = await db.execute(filtered_stmt)
     auctions = result.scalars().all()
 
     has_more = len(auctions) > limit
@@ -127,7 +144,7 @@ async def search_auctions(
             state=a.state,
             start_ts=a.start_ts.isoformat(),
             end_ts=a.end_ts.isoformat(),
-            bid_count=0,  # populated by caller if needed
+            bid_count=0,
         )
         for a in auctions
     ]
@@ -144,16 +161,3 @@ async def search_auctions(
         next_cursor=next_cursor,
         total=total,
     )
-
-
-def _copy_where(from_stmt, to_stmt, model):
-    """Copy WHERE clauses from one statement to another (same model)."""
-    wc = from_stmt.whereclause
-    children = wc.get_children() if hasattr(wc, 'get_children') else []
-    for criterion in children:
-        to_stmt = to_stmt.where(criterion)
-    # Handle single criterion case
-    if wc is not None and not hasattr(wc, 'get_children'):
-        pass  # already handled via the whereclause
-    # For simple cases, just filter by state
-    return to_stmt
