@@ -8,11 +8,17 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from auction_app.config import settings
 from auction_app.database import Base
 from auction_app.models import User, Auction, Bid, ProxyBid  # noqa: F401 — register models
 
 # Alembic Config object
 config = context.config
+
+# Override sqlalchemy.url with DATABASE_URL from settings (supports compose env)
+db_url = settings.DATABASE_URL
+if db_url:
+    config.set_main_option("sqlalchemy.url", db_url)
 
 # Set up logging
 if config.config_file_name is not None:

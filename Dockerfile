@@ -27,16 +27,17 @@ FROM python:3.12-slim
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Runtime-only system deps
+# Runtime-only system deps (curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev && \
+    libpq-dev curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY alembic.ini alembic/ ./alembic/
+COPY alembic.ini .
+COPY alembic/ ./alembic/
 
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-CMD ["uvicorn", "auction_app.main:create_app()", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "auction_app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

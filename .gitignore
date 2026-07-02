@@ -1,19 +1,31 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
-.venv*/
-venv/
-env/
-verify/.venv/
-.env
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-build/
 dist/
-*.log
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Project specific
 *.rdb
-dump.rdb
-verify/logs/
-verify/state/
+*.rdb.bak
