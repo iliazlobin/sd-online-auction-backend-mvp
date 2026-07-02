@@ -30,7 +30,7 @@ class User(Base):
     )
 
     # Relationships
-    auctions = relationship("Auction", back_populates="seller")
+    auctions = relationship("Auction", back_populates="seller", foreign_keys="[Auction.seller_id]")
     bids = relationship("Bid", back_populates="bidder")
     proxy_bids = relationship("ProxyBid", back_populates="bidder")
 

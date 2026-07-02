@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Numeric
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,10 +22,14 @@ class ProxyBid(Base):
         server_default="gen_random_uuid()",
     )
     auction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("auction.auction_id"),
+        nullable=False
     )
     bidder_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("user.user_id"),
+        nullable=False
     )
     max_bid: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     active: Mapped[bool] = mapped_column(

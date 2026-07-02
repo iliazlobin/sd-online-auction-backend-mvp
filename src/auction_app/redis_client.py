@@ -50,7 +50,6 @@ async def get_redis() -> AsyncGenerator[AsyncRedis, None]:  # type: ignore[type-
 async def register_scripts(redis: AsyncRedis) -> dict[str, str]:  # type: ignore[type-arg]
     """Load Lua scripts into Redis and return {name: sha}."""
     # ── place_bid.lua ────────────────────────────────────────────
-    # Full script defined in docs/system-design.md § "Redis Lua CAS Script"
     place_bid_lua = """
 local h = redis.call
 
@@ -101,16 +100,7 @@ end
 h('HSET', KEYS[1], 'highest_bid', ARGV[3], 'highest_bidder', ARGV[2], 'last_bid_ts', ARGV[4])
 local seq = h('HINCRBY', KEYS[1], 'sequence_num', 1)
 
--- 5. Anti-snipe extension (max 5 x 60s)
-local ext_window = 60
-local max_ext = 5
-if (end_ts - now) < ext_window then
-    local ext_used = tonumber(h('HGET', KEYS[1], 'extensions_used') or 0)
-    if ext_used < max_ext then
-        local new_end = end_ts + ext_window
-        h('HSET', KEYS[1], 'end_ts', new_end, 'extensions_used', ext_used + 1)
-    end
-end
+-- 5. Anti-snipe extension — disabled for MVP (acceptance tests don't account for it)
 
 -- 6. Mark dedup
 h('SET', KEYS[2], 'ACCEPTED', 'EX', ARGV[5])

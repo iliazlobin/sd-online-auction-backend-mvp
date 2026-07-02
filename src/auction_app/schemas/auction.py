@@ -61,5 +61,7 @@ class AuctionDetail(BaseModel):
     start_ts: datetime
     end_ts: datetime
     time_remaining_seconds: int
+    winner_id: uuid.UUID | None = None
+    reserve_price: float | None = None
 
     model_config = {"from_attributes": True}
