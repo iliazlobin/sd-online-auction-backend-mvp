@@ -41,6 +41,9 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
+    env:
+      DATABASE_URL: postgresql+asyncpg://auction:auction@localhost:5432/auction
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,9 +53,6 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run migrations
         run: alembic upgrade head
-        env:
-          DATABASE_URL: postgresql+asyncpg://auction:auction@localhost:5432/auction
-          REDIS_URL: redis://localhost:***@localhost:6379/0
       - name: Start server
         run: |
           PYTHONPATH=src uvicorn auction_app.main:create_app --factory --host 0.0.0.0 --port 8010 &
@@ -65,7 +65,7 @@ jobs:
           done
           echo Server did not become ready && exit 1
       - name: Run functional tests
-        run: DATABASE_URL=postgresql+asyncpg://auction:auction@localhost:5432/auction REDIS_URL=redis://localhost:***@localhost:6379/0 PYTHONPATH=src pytest tests/ -v
+        run: PYTHONPATH=src pytest tests/ -v
       - name: Stop server
         if: always()
         run: kill $(cat /tmp/server.pid) 2>/dev/null || true
