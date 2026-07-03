@@ -29,3 +29,13 @@ Thumbs.db
 # Project specific
 *.rdb
 *.rdb.bak
+.venv*/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.log
+dump.rdb
+verify/logs/
+verify/state/
+.finalize.lock/
+.noship
