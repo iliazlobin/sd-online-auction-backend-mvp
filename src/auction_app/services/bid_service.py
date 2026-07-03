@@ -26,6 +26,7 @@ from auction_app.schemas.bid import BidHistoryItem, BidHistoryPage
 # helpers
 # ──────────────────────────────────────────────────────────────────
 
+
 def _to_decimal_str(val: Any) -> str:
     if val is None:
         return "0.00"
@@ -186,12 +187,14 @@ async def place_bid(
     # 5. Publish fanout event on acceptance
     if status == "ACCEPTED":
         try:
-            payload = json.dumps({
-                "sequence_num": sequence_num,
-                "current_price": current_price,
-                "high_bidder_masked": _mask_bidder(str(bidder_id)),
-                "end_ts": str(int(end_ts_unix)),
-            })
+            payload = json.dumps(
+                {
+                    "sequence_num": sequence_num,
+                    "current_price": current_price,
+                    "high_bidder_masked": _mask_bidder(str(bidder_id)),
+                    "end_ts": str(int(end_ts_unix)),
+                }
+            )
             await redis.publish(f"fanout:auction:{auction_id}", payload)
         except Exception:
             pass
@@ -208,6 +211,7 @@ async def place_bid(
 def _mask_bidder(bidder_id: str) -> str:
     """Return first 8 hex chars of SHA256(bidder_id)."""
     import hashlib
+
     return hashlib.sha256(bidder_id.encode()).hexdigest()[:8]
 
 

@@ -9,12 +9,10 @@ import datetime
 import time
 import uuid
 
-import pytest
-
 
 def _create_auction(client, seller, **overrides):
     """Helper: create an auction via REST. Returns JSON response dict."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     payload = {
         "title": f"Auction {uuid.uuid4().hex[:8]}",
         "description": "FR6 acceptance test auction",
@@ -40,11 +38,12 @@ def test_fr6_winner_determined_after_close(client, seller, bidder):
     Creates a short auction, places a bid, waits for close, then asserts
     the auction detail shows winner_id matching the highest bidder.
     """
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Create auction that closes in 4 seconds
     auction = _create_auction(
-        client, seller,
+        client,
+        seller,
         start_ts=(now - datetime.timedelta(seconds=10)).isoformat(),
         end_ts=(now + datetime.timedelta(seconds=4)).isoformat(),
     )
@@ -84,11 +83,12 @@ def test_fr6_winner_determined_after_close(client, seller, bidder):
 
 def test_fr6_no_winner_on_unsold_auction(client, seller):
     """FR6: Auction with no bids closes as UNSOLD with null winner_id."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Create auction that closes in 3 seconds — no bids placed
     auction = _create_auction(
-        client, seller,
+        client,
+        seller,
         start_ts=(now - datetime.timedelta(seconds=10)).isoformat(),
         end_ts=(now + datetime.timedelta(seconds=3)).isoformat(),
     )
@@ -102,9 +102,7 @@ def test_fr6_no_winner_on_unsold_auction(client, seller):
     assert r.status_code == 200, f"GET auction failed: {r.status_code} {r.text}"
     data = r.json()
 
-    assert data["state"] in ("CLOSED", "UNSOLD"), (
-        f"Expected closed/unsold, got {data['state']}"
-    )
+    assert data["state"] in ("CLOSED", "UNSOLD"), f"Expected closed/unsold, got {data['state']}"
 
     # No bids → winner_id should be null
     assert data.get("winner_id") is None, (

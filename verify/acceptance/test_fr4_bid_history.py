@@ -8,12 +8,10 @@ No app imports. Uses httpx client fixtures from conftest.py.
 import datetime
 import uuid
 
-import pytest
-
 
 def _create_auction(client, seller, **overrides):
     """Helper: create an auction via REST. Returns JSON response dict."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     payload = {
         "title": f"Auction {uuid.uuid4().hex[:8]}",
         "description": "FR4 acceptance test auction",
@@ -63,7 +61,7 @@ def test_fr4_bid_history_paginated_newest_first(client, seller, bidder):
     assert "bids" in body
     bids = body["bids"]
     assert isinstance(bids, list)
-    assert len(bids) > 0, f"Expected at least one bid in history, got empty list"
+    assert len(bids) > 0, "Expected at least one bid in history, got empty list"
     assert len(bids) <= 3, f"Limit 3 should return at most 3 bids, got {len(bids)}"
 
     # Verify structure of each bid entry

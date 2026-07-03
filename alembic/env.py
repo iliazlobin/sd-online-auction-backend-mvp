@@ -5,12 +5,12 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from alembic import context
 from auction_app.config import settings
 from auction_app.database import Base
-from auction_app.models import User, Auction, Bid, ProxyBid  # noqa: F401 — register models
+from auction_app.models import Auction, Bid, ProxyBid, User  # noqa: F401 — register models
 
 # Alembic Config object
 config = context.config

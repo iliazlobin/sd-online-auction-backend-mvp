@@ -47,13 +47,9 @@ def _build_where(stmt, *, category, price_min, price_max, q, state, cursor):
         stmt = stmt.where(Auction.category == category)
 
     if price_min is not None:
-        stmt = stmt.where(
-            func.coalesce(Auction.highest_bid, Auction.starting_price) >= price_min
-        )
+        stmt = stmt.where(func.coalesce(Auction.highest_bid, Auction.starting_price) >= price_min)
     if price_max is not None:
-        stmt = stmt.where(
-            func.coalesce(Auction.highest_bid, Auction.starting_price) <= price_max
-        )
+        stmt = stmt.where(func.coalesce(Auction.highest_bid, Auction.starting_price) <= price_max)
 
     if q and q.strip():
         tsquery = func.plainto_tsquery(literal_column("'english'"), q)
@@ -118,9 +114,7 @@ async def search_auctions(
     total = total_result.scalar() or 0
 
     # Order by created_at DESC, auction_id DESC for stable pagination
-    filtered_stmt = filtered_stmt.order_by(
-        desc(Auction.created_at), desc(Auction.auction_id)
-    )
+    filtered_stmt = filtered_stmt.order_by(desc(Auction.created_at), desc(Auction.auction_id))
 
     # Fetch with limit + 1 for has_more detection
     filtered_stmt = filtered_stmt.limit(limit + 1)
@@ -152,9 +146,7 @@ async def search_auctions(
     next_cursor = None
     if has_more and auctions:
         last = auctions[-1]
-        next_cursor = _encode_cursor(
-            last.created_at.isoformat(), str(last.auction_id)
-        )
+        next_cursor = _encode_cursor(last.created_at.isoformat(), str(last.auction_id))
 
     return SearchResult(
         auctions=items,

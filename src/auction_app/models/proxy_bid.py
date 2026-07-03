@@ -22,14 +22,10 @@ class ProxyBid(Base):
         server_default="gen_random_uuid()",
     )
     auction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("auction.auction_id"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("auction.auction_id"), nullable=False
     )
     bidder_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("user.user_id"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("user.user_id"), nullable=False
     )
     max_bid: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     active: Mapped[bool] = mapped_column(

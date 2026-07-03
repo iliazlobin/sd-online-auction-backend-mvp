@@ -14,7 +14,6 @@ import uuid
 
 import pytest
 
-
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8010")
 
 
@@ -25,7 +24,7 @@ def _ws_url(base_url: str) -> str:
 
 def _create_auction(client, seller, **overrides):
     """Helper: create an auction via REST. Returns JSON response dict."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     payload = {
         "title": f"Auction {uuid.uuid4().hex[:8]}",
         "description": "FR7 acceptance test auction",
@@ -69,12 +68,8 @@ def test_fr7_websocket_receives_bid_updates(client, seller, bidder):
             # Read initial state frame
             initial_raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
             initial = json.loads(initial_raw)
-            assert "current_price" in initial, (
-                f"Initial WS frame missing current_price: {initial}"
-            )
-            assert "sequence_num" in initial, (
-                f"Initial WS frame missing sequence_num: {initial}"
-            )
+            assert "current_price" in initial, f"Initial WS frame missing current_price: {initial}"
+            assert "sequence_num" in initial, f"Initial WS frame missing sequence_num: {initial}"
 
             # Place a bid via REST in executor (httpx is sync)
             loop = asyncio.get_running_loop()
@@ -104,9 +99,7 @@ def test_fr7_websocket_receives_bid_updates(client, seller, bidder):
 
             # current_price should reflect our bid
             current_price = float(update["current_price"])
-            assert current_price >= 200.00, (
-                f"Expected current_price >= 200.00, got {current_price}"
-            )
+            assert current_price >= 200.00, f"Expected current_price >= 200.00, got {current_price}"
 
             # Bidder mask should be 8 hex chars
             assert len(update["high_bidder_masked"]) == 8, (
@@ -132,12 +125,8 @@ def test_fr7_websocket_initial_state_on_connect(client, seller):
             initial_raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
             initial = json.loads(initial_raw)
 
-            assert "current_price" in initial, (
-                f"Missing current_price in initial frame: {initial}"
-            )
-            assert "sequence_num" in initial, (
-                f"Missing sequence_num in initial frame: {initial}"
-            )
+            assert "current_price" in initial, f"Missing current_price in initial frame: {initial}"
+            assert "sequence_num" in initial, f"Missing sequence_num in initial frame: {initial}"
             # No bids yet → sequence_num should be 0 (or absent, treated as 0)
             seq = int(initial["sequence_num"]) if initial["sequence_num"] else 0
             assert seq >= 0, f"Expected sequence_num >= 0, got {seq}"

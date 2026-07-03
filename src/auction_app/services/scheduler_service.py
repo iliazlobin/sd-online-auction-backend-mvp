@@ -59,9 +59,7 @@ async def poll_due_starts() -> None:
                 try:
                     await start_auction(db, redis, auction.auction_id)
                 except Exception:
-                    logger.exception(
-                        "Failed to start auction %s", auction.auction_id
-                    )
+                    logger.exception("Failed to start auction %s", auction.auction_id)
 
             await db.commit()
     except Exception:
@@ -109,16 +107,12 @@ async def poll_due_closes() -> None:
                             now_unix = int(now_utc.timestamp())
                             if now_unix < redis_end:
                                 # Auction was extended — update DB end_ts and skip
-                                auction.end_ts = datetime.fromtimestamp(
-                                    redis_end, tz=UTC
-                                )
+                                auction.end_ts = datetime.fromtimestamp(redis_end, tz=UTC)
                                 continue
 
                     await close_auction(db, redis, auction.auction_id)
                 except Exception:
-                    logger.exception(
-                        "Failed to close auction %s", auction.auction_id
-                    )
+                    logger.exception("Failed to close auction %s", auction.auction_id)
 
             await db.commit()
     except Exception:

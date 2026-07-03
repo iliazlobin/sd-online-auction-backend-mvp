@@ -22,14 +22,10 @@ class Bid(Base):
         server_default="gen_random_uuid()",
     )
     auction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("auction.auction_id"),
-        nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("auction.auction_id"), nullable=False, index=True
     )
     bidder_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("user.user_id"),
-        nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("user.user_id"), nullable=False, index=True
     )
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     is_proxy: Mapped[bool] = mapped_column(
@@ -42,9 +38,7 @@ class Bid(Base):
         default="ACCEPTED",
         server_default="ACCEPTED",
     )
-    rejection_reason: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_ts: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

@@ -12,17 +12,16 @@ Concurrency: Two simultaneous bids, higher wins
 """
 
 import datetime
-import uuid
-import time
 import threading
+import time
+import uuid
+
 import requests  # sync, for thread-based concurrency test
-
-import pytest
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FR1: Create auction
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_fr1_create_auction_returns_201(client, seller):
     """FR1: Create auction → 201 + auction_id, state reflects."""
@@ -34,8 +33,12 @@ def test_fr1_create_auction_returns_201(client, seller):
             "category": "watches",
             "starting_price": 5000.00,
             "min_increment": 100.00,
-            "start_ts": (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=5)).isoformat(),
-            "end_ts": (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)).isoformat(),
+            "start_ts": (
+                datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=5)
+            ).isoformat(),
+            "end_ts": (
+                datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)
+            ).isoformat(),
         },
         headers={"X-User-ID": seller["user_id"]},
     )
@@ -78,12 +81,15 @@ def test_fr1_create_auction_missing_seller_returns_400(client):
             "end_ts": "2026-08-01T12:00:00Z",
         },
     )
-    assert r.status_code in (400, 401, 403, 422), f"Expected rejection, got {r.status_code}: {r.text}"
+    assert r.status_code in (400, 401, 403, 422), (
+        f"Expected rejection, got {r.status_code}: {r.text}"
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FR2: Place bid
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_fr2_place_higher_bid_accepted(client, seller, bidder):
     """FR2: Higher bid accepted → 201, bid_id returned."""
@@ -174,6 +180,7 @@ def test_fr2_bid_on_nonexistent_auction_returns_404(client, bidder):
 # FR3: View auction
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def test_fr3_view_auction_returns_metadata(client, seller, bidder):
     """FR3: GET auction returns metadata + current_price."""
     auction = create_auction(client, seller)
@@ -208,15 +215,17 @@ def test_fr3_view_nonexistent_auction_returns_404(client):
 # FR5: Auction lifecycle
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def test_fr5_auction_lifecycle_create_active_close(client, seller, bidder):
     """FR5: Auction goes through states: UPCOMING → ACTIVE → bids → CLOSED."""
     import datetime
 
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Create auction that starts now and ends in 3 seconds (for fast test)
     auction = create_auction(
-        client, seller,
+        client,
+        seller,
         start_ts=now.isoformat(),
         end_ts=(now + datetime.timedelta(seconds=3)).isoformat(),
     )
@@ -237,18 +246,21 @@ def test_fr5_auction_lifecycle_create_active_close(client, seller, bidder):
     r2 = client.get(f"/auctions/{auction['auction_id']}")
     assert r2.status_code == 200
     data = r2.json()
-    assert data["state"] in ("CLOSED", "SOLD", "UNSOLD"), f"Expected terminal state, got {data['state']}"
+    assert data["state"] in ("CLOSED", "SOLD", "UNSOLD"), (
+        f"Expected terminal state, got {data['state']}"
+    )
 
 
 def test_fr5_bid_on_closed_auction_rejected(client, seller, bidder):
     """FR5: Bidding on a closed auction is rejected with AUCTION_NOT_ACTIVE."""
     import datetime
 
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Create auction that ends in 2 seconds
     auction = create_auction(
-        client, seller,
+        client,
+        seller,
         start_ts=(now - datetime.timedelta(seconds=10)).isoformat(),
         end_ts=(now + datetime.timedelta(seconds=2)).isoformat(),
     )
@@ -266,22 +278,26 @@ def test_fr5_bid_on_closed_auction_rejected(client, seller, bidder):
     assert r.status_code == 409, f"Expected 409 on closed auction, got {r.status_code}: {r.text}"
     data = r.json()
     assert data["status"] == "REJECTED"
-    assert data.get("reason") in ("AUCTION_NOT_ACTIVE", "AUCTION_ENDED"), f"Unexpected reason: {data}"
+    assert data.get("reason") in ("AUCTION_NOT_ACTIVE", "AUCTION_ENDED"), (
+        f"Unexpected reason: {data}"
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Concurrency: Two simultaneous bids, higher wins
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def test_concurrency_two_simultaneous_bids_higher_wins(client, seller):
     """Two simultaneous bids — the higher one wins, no double-acceptance."""
     import datetime
 
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     # Create auction
     auction = create_auction(
-        client, seller,
+        client,
+        seller,
         start_ts=(now - datetime.timedelta(seconds=5)).isoformat(),
         end_ts=(now + datetime.timedelta(minutes=5)).isoformat(),
     )
@@ -342,8 +358,9 @@ def test_concurrency_two_simultaneous_bids_higher_wins(client, seller):
     # Both bids may be accepted because Redis Lua scripts execute atomically,
     # serializing what the threads attempted concurrently. The key invariant is
     # that each bid is correctly priced against the current highest at execution time.
-    accepted = sum(1 for s, d in [(status_a, data_a), (status_b, data_b)]
-                   if d.get("status") == "ACCEPTED")
+    accepted = sum(
+        1 for s, d in [(status_a, data_a), (status_b, data_b)] if d.get("status") == "ACCEPTED"
+    )
     assert accepted >= 1, f"Neither bid accepted: A={data_a}, B={data_b}"
 
     # Verify the higher bid (B: 500) is the final winner
@@ -370,10 +387,12 @@ def test_concurrency_two_simultaneous_bids_higher_wins(client, seller):
 # Helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def create_auction(client, seller, **overrides):
     """Helper: create an auction with sensible defaults for current time."""
     import datetime
-    now = datetime.datetime.now(datetime.timezone.utc)
+
+    now = datetime.datetime.now(datetime.UTC)
     payload = {
         "title": f"Test Auction {uuid.uuid4().hex[:8]}",
         "description": "Acceptance test auction",

@@ -24,12 +24,14 @@ async def publish_bid_accepted(
     end_ts: str,
 ) -> None:
     """Publish a bid-accepted event to the fanout Pub/Sub channel."""
-    payload = json.dumps({
-        "sequence_num": sequence_num,
-        "current_price": amount,
-        "high_bidder_masked": mask_bidder_id(str(bidder_id)),
-        "end_ts": str(end_ts),
-    })
+    payload = json.dumps(
+        {
+            "sequence_num": sequence_num,
+            "current_price": amount,
+            "high_bidder_masked": mask_bidder_id(str(bidder_id)),
+            "end_ts": str(end_ts),
+        }
+    )
     await redis.publish(f"fanout:auction:{auction_id}", payload)
 
 

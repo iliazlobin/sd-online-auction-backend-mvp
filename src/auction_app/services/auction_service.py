@@ -22,6 +22,7 @@ from auction_app.schemas.auction import AuctionCreate, AuctionDetail
 # helpers
 # ──────────────────────────────────────────────────────────────────
 
+
 def _to_decimal_str(val: Any) -> str:
     """Render a numeric value to a two-decimal string for JSON / Redis."""
     if val is None:
@@ -208,9 +209,7 @@ async def get_auction_detail(
     # Count bids
     from auction_app.models.bid import Bid
 
-    bid_count_expr = select(Bid).where(
-        Bid.auction_id == auction_id, Bid.status == "ACCEPTED"
-    )
+    bid_count_expr = select(Bid).where(Bid.auction_id == auction_id, Bid.status == "ACCEPTED")
     bid_result = await db.execute(bid_count_expr)
     bid_count = len(bid_result.scalars().all())
 
@@ -243,7 +242,5 @@ async def get_auction_detail(
         end_ts=auction.end_ts,
         time_remaining_seconds=time_remaining,
         winner_id=auction.winner_id,
-        reserve_price=(
-            float(auction.reserve_price) if auction.reserve_price is not None else None
-        ),
+        reserve_price=(float(auction.reserve_price) if auction.reserve_price is not None else None),
     )

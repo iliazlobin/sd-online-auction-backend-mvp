@@ -7,8 +7,9 @@ No app imports — this is the fixed functional contract.
 
 import os
 import uuid
-import pytest
+
 import httpx
+import pytest
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8010")
 
@@ -59,7 +60,8 @@ def bidder(client: httpx.Client) -> dict:
 def create_auction(client: httpx.Client, seller: dict, **overrides) -> dict:
     """Helper: create an auction with sensible defaults."""
     import datetime
-    now = datetime.datetime.now(datetime.timezone.utc)
+
+    now = datetime.datetime.now(datetime.UTC)
     payload = {
         "title": f"Auction {uuid.uuid4().hex[:8]}",
         "description": "Test auction for acceptance suite",

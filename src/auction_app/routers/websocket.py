@@ -35,15 +35,16 @@ async def auction_live(websocket: WebSocket, auction_id: uuid.UUID) -> None:
         data = await redis.hgetall(key)
 
         if data:
+
             def _s(k: bytes | str) -> str:
                 return k.decode() if isinstance(k, bytes) else k
 
             initial = {
                 "sequence_num": int(_s(data.get("sequence_num", "0"))),
                 "current_price": _s(data.get("highest_bid", "0.00")),
-                "high_bidder_masked": mask_bidder_id(
-                    _s(data.get("highest_bidder", ""))
-                ) if data.get("highest_bidder") else "",
+                "high_bidder_masked": mask_bidder_id(_s(data.get("highest_bidder", "")))
+                if data.get("highest_bidder")
+                else "",
                 "end_ts": _s(data.get("end_ts", "0")),
             }
         else:
