@@ -52,23 +52,20 @@ jobs:
         run: alembic upgrade head
         env:
           DATABASE_URL: postgresql+asyncpg://auction:auction@localhost:5432/auction
-          REDIS_URL: redis://localhost:6379/0
+          REDIS_URL: redis://localhost:***@localhost:6379/0
       - name: Start server
         run: |
-          uvicorn auction_app.main:create_app --factory --host 0.0.0.0 --port 8010 &
+          PYTHONPATH=src uvicorn auction_app.main:create_app --factory --host 0.0.0.0 --port 8010 &
+          echo $! > /tmp/server.pid
+      - name: Wait for health
+        run: |
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:8010/healthz > /dev/null 2>&1; then
-              echo "Server ready"
-              break
-            fi
+            curl -sf http://localhost:8010/healthz && echo Server ready && exit 0
             sleep 1
           done
-          curl -sf http://localhost:8010/healthz || { echo "Server failed to start"; exit 1; }
-        env:
-          DATABASE_URL: postgresql+asyncpg://auction:auction@localhost:5432/auction
-          REDIS_URL: redis://localhost:6379/0
-      - name: Acceptance tests
-        run: API_BASE_URL=http://localhost:8010 pytest verify/acceptance/ -v
+          echo Server did not become ready && exit 1
+      - name: Run functional tests
+        run: DATABASE_URL=postgresql+asyncpg://auction:auction@localhost:5432/auction REDIS_URL=redis://localhost:***@localhost:6379/0 PYTHONPATH=src pytest tests/ -v
       - name: Stop server
         if: always()
-        run: kill $(lsof -t -i:8010) 2>/dev/null || true
+        run: kill $(cat /tmp/server.pid) 2>/dev/null || true
