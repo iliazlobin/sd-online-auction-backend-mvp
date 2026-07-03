@@ -370,7 +370,7 @@ def test_concurrency_two_simultaneous_bids_higher_wins(client, seller):
         # Bidder B bid 500 > bidder A's 300
         pass
     elif data_a.get("status") == "ACCEPTED":
-        # Bidder A won (possible if B's bid arrived first and A's was higher — but A is 300 < B's 500)
+        # Bidder A won (only possible if B's bid arrived first)
         # This could happen if timing caused A to be processed after B, but with 300 < 500
         # the CAS should reject A. Let's just verify no double-accept.
         pass
